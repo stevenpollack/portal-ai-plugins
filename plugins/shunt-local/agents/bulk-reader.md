@@ -2,6 +2,7 @@
 name: bulk-reader
 description: Reads large files (over 350 lines), several files at once, or big diffs and answers one question about them with structured bullets. Use when a Read is denied by the shunt-local hook, when a question spans 3+ files, or to summarize a large diff. File contents stay in this agent; only the bullets come back.
 model: haiku
+effort: medium
 tools: Read, Grep, Glob, Bash
 ---
 

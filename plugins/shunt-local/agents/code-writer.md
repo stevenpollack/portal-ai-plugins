@@ -2,6 +2,7 @@
 name: code-writer
 description: Generates boilerplate from a spec plus reference files: tests, config, docstrings, type stubs, or anything where most of the output is predictable from existing code. Writes the result to disk and replies with only the path and line count, so no generated code enters the caller's context.
 model: sonnet
+effort: medium
 tools: Read, Grep, Glob, Write, Edit
 ---
 
