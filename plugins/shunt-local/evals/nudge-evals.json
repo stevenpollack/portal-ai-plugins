@@ -1,0 +1,48 @@
+{
+  "skill_name": "shunt-local",
+  "description": "Evals for the nudge-code-writer UserPromptSubmit hook",
+  "evals": [
+    {
+      "id": 1,
+      "name": "write-tests",
+      "input": { "prompt": "Write tests for UserService matching the OrderService tests" },
+      "expected_decision": "nudge",
+      "reason": "Boilerplate keyword — inject the delegation hint"
+    },
+    {
+      "id": 2,
+      "name": "config-stub",
+      "input": { "prompt": "add a config stub for the staging environment" },
+      "expected_decision": "nudge",
+      "reason": "Two keywords, case-insensitive"
+    },
+    {
+      "id": 3,
+      "name": "bug-fix",
+      "input": { "prompt": "fix the null pointer in the parser" },
+      "expected_decision": "none",
+      "reason": "Debugging stays on Claude — no hint"
+    },
+    {
+      "id": 4,
+      "name": "keyword-inside-word",
+      "input": { "prompt": "show me the contest results and the latest specification" },
+      "expected_decision": "none",
+      "reason": "Whole-word match only: 'contest' and 'specification' do not count"
+    },
+    {
+      "id": 5,
+      "name": "empty-prompt",
+      "input": { "prompt": "" },
+      "expected_decision": "none",
+      "reason": "Nothing to match"
+    },
+    {
+      "id": 6,
+      "name": "missing-prompt-field",
+      "input": {},
+      "expected_decision": "none",
+      "reason": "No prompt field — pass through"
+    }
+  ]
+}

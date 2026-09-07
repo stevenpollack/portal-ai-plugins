@@ -1,12 +1,16 @@
 #!/bin/bash
-# Hook evals: pipe each case's input into hooks/check-read and compare the decision.
-# Needs only bash and jq.
+# Hook evals: pipe each case's input into a hook and compare the decision.
+# Needs only bash and jq. The code-writer agent has its own opt-in check in
+# code-writer-eval.sh, since it spends API calls.
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-HOOK="$SCRIPT_DIR/../hooks/check-read"
+HOOKS="$SCRIPT_DIR/../hooks"
 FIXTURES="$SCRIPT_DIR/.fixtures"
+# Silence from a hook means "no decision", which the harness treats as allow.
+GATE_JQ='.hookSpecificOutput.permissionDecision // "allow"'
+NUDGE_JQ='if (.hookSpecificOutput.additionalContext // "") == "" then "none" else "nudge" end'
 PASSED=0
 FAILED=0
 TOTAL=0
@@ -52,7 +56,7 @@ setup_fixtures() {
 }
 
 run_eval() {
-  local name="$1" input="$2" expected="$3" reason="$4" env_json="$5"
+  local hook="$1" decision_jq="$2" name="$3" input="$4" expected="$5" reason="$6" env_json="$7"
   TOTAL=$((TOTAL + 1))
 
   local env_cmd=""
@@ -63,9 +67,8 @@ run_eval() {
   fi
 
   local result actual
-  result=$(echo "$input" | env $env_cmd bash "$HOOK" 2>/dev/null)
-  # Silence from the hook means "no decision", which the harness treats as allow.
-  actual=$(printf '%s' "${result:-null}" | jq -r '.hookSpecificOutput.permissionDecision // "allow"')
+  result=$(echo "$input" | env $env_cmd bash "$hook" 2>/dev/null)
+  actual=$(printf '%s' "${result:-null}" | jq -r "$decision_jq")
 
   if [ "$actual" = "$expected" ]; then
     printf "  \033[32mPASS\033[0m  %-30s %s\n" "$name" "$reason"
@@ -77,7 +80,7 @@ run_eval() {
 }
 
 run_suite() {
-  local tool="$1" evals_file="$2" label="$3"
+  local hook="$1" decision_jq="$2" tool="$3" evals_file="$4" label="$5"
 
   setup_fixtures "$evals_file"
 
@@ -95,14 +98,15 @@ run_suite() {
     reason=$(jq -r ".evals[$i].reason" "$evals_file")
     input=$(jq -c --arg t "$tool" ".evals[$i].input + {tool_name: \$t}" "$evals_file" | sed "s|{{FIXTURES}}|$FIXTURES|g")
     env_json=$(jq -r ".evals[$i].env // empty" "$evals_file")
-    run_eval "$name" "$input" "$expected" "$reason" "$env_json"
+    run_eval "$hook" "$decision_jq" "$name" "$input" "$expected" "$reason" "$env_json"
   done
 
   rm -rf "$FIXTURES"
 }
 
-run_suite Read "$SCRIPT_DIR/hook-evals.json" "Read (check-read)"
-run_suite Bash "$SCRIPT_DIR/bash-hook-evals.json" "Bash (check-read)"
+run_suite "$HOOKS/check-read" "$GATE_JQ" Read "$SCRIPT_DIR/hook-evals.json" "Read (check-read)"
+run_suite "$HOOKS/check-read" "$GATE_JQ" Bash "$SCRIPT_DIR/bash-hook-evals.json" "Bash (check-read)"
+run_suite "$HOOKS/nudge-code-writer" "$NUDGE_JQ" "" "$SCRIPT_DIR/nudge-evals.json" "UserPromptSubmit (nudge-code-writer)"
 
 echo ""
 echo "════════════════════════════════════════════════════════════════"

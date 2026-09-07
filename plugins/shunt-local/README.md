@@ -4,8 +4,9 @@ A Claude Code plugin that shunts I/O-heavy work to cheaper local subagents. Same
 
 ## How it works
 
-1. **Hook** — `hooks/check-read` fires before every `Read` and `Bash` call on the main thread. A full read of a file over 350 lines is denied with a reason that tells Claude to delegate to the `bulk-reader` agent.
-2. **Agents** — `bulk-reader` (haiku) reads the files in its own context and returns bullets. `code-writer` (sonnet) generates boilerplate from a spec plus reference files, writes it to disk, and returns only the path and line count.
+1. **Gate** — `hooks/check-read` fires before every `Read` and `Bash` call on the main thread. A full read of a file over 350 lines is denied with a reason that tells Claude to delegate to the `bulk-reader` agent.
+2. **Nudge** — `hooks/nudge-code-writer` fires on every prompt. When it mentions tests, config, stubs, or similar boilerplate, it adds one line of context pointing at the `code-writer` agent. Advice, not a gate: a hook on `Write` would fire after the expensive generation is already done.
+3. **Agents** — `bulk-reader` (haiku) reads the files in its own context and returns bullets. `code-writer` (sonnet) generates boilerplate from a spec plus reference files, writes it to disk, and returns only the path and line count.
 
 A subagent's tool results never enter the parent context, so the file is read once by the cheap model and Claude sees only the answer. The hook detects the `agent_id` field that Claude Code adds inside subagents and lets their reads through, so the worker is never gated.
 
@@ -24,15 +25,19 @@ claude plugin install shunt-local@portal
 shunt-local/
 ├── .claude-plugin/plugin.json
 ├── hooks/
-│   ├── hooks.json           # PreToolUse matcher Read|Bash
-│   └── check-read           # Denies full reads of files > 350 lines on the main thread
+│   ├── hooks.json           # PreToolUse Read|Bash, UserPromptSubmit
+│   ├── check-read           # Denies full reads of files > 350 lines on the main thread
+│   └── nudge-code-writer    # Adds a delegation hint on boilerplate-shaped prompts
 ├── agents/
 │   ├── bulk-reader.md       # haiku: read files, answer one question in bullets
 │   └── code-writer.md       # sonnet: generate boilerplate to disk from spec + reference
 └── evals/
-    ├── run.sh               # Hook evals (36 cases)
+    ├── run.sh               # Hook evals (42 cases), bash + jq only
     ├── hook-evals.json      # Read cases
-    └── bash-hook-evals.json # Bash cases
+    ├── bash-hook-evals.json # Bash cases
+    ├── nudge-evals.json     # UserPromptSubmit cases
+    ├── code-writer-eval.sh  # Opt-in headless run of the code-writer agent
+    └── fixtures/            # Source + reference test for code-writer-eval.sh
 ```
 
 ## Agents
@@ -74,7 +79,11 @@ Set it in the `env` block of `.claude/settings.json`.
 ## Evals
 
 ```bash
+# Hook decisions — bash + jq only
 bash plugins/shunt-local/evals/run.sh
+
+# Also run the code-writer agent headless and check its output contract — spends API calls
+bash plugins/shunt-local/evals/code-writer-eval.sh
 ```
 
 ## Known limitations
