@@ -33,6 +33,17 @@
       "repository": "https://github.com/spotify/portal-ai-plugins",
       "source": "./plugins/shunt",
       "category": "developer-tools"
+    },
+    {
+      "name": "shunt-local",
+      "description": "Shunts I/O-heavy work to cheaper local subagents. A hook denies large file reads on the main thread and redirects to a haiku bulk-reader agent; a sonnet code-writer agent generates boilerplate to disk. No Portal CLI needed.",
+      "version": "0.1.0",
+      "author": {
+        "name": "Spotify"
+      },
+      "repository": "https://github.com/spotify/portal-ai-plugins",
+      "source": "./plugins/shunt-local",
+      "category": "developer-tools"
     }
   ]
 }

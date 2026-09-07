@@ -1,0 +1,17 @@
+{
+  "name": "shunt-local",
+  "displayName": "Shunt (local)",
+  "version": "0.1.0",
+  "description": "Shunts I/O-heavy work to cheaper local subagents. A hook denies large file reads on the main thread and redirects to a haiku bulk-reader agent; a sonnet code-writer agent generates boilerplate to disk. No Portal CLI needed.",
+  "author": {
+    "name": "Spotify"
+  },
+  "repository": "https://github.com/spotify/portal-ai-plugins",
+  "license": "Apache-2.0",
+  "keywords": [
+    "token-optimization",
+    "model-routing",
+    "delegation",
+    "subagents"
+  ]
+}

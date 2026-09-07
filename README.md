@@ -15,7 +15,7 @@ diagnostics, and invoke Portal actions.
 - Generate concise service briefings with available ownership, health, incident, and documentation details.
 - Discover and safely invoke Portal actions with built-in help, dry-run, and confirmation safeguards.
 
-The marketplace also ships **shunt** (Claude Code only for now): a plugin that routes I/O-heavy agent work — bulk file reads and boilerplate generation — to AiKA modes running cheaper worker models, via the Portal CLI actions registry. See [`plugins/shunt/README.md`](plugins/shunt/README.md).
+The marketplace also ships **shunt** (Claude Code only for now): a plugin that routes I/O-heavy agent work — bulk file reads and boilerplate generation — to AiKA modes running cheaper worker models, via the Portal CLI actions registry. See [`plugins/shunt/README.md`](plugins/shunt/README.md). **shunt-local** does the same with local Claude Code subagents on cheaper models, no Portal CLI required. See [`plugins/shunt-local/README.md`](plugins/shunt-local/README.md).
 
 ## Installation
 
@@ -24,7 +24,8 @@ The marketplace also ships **shunt** (Claude Code only for now): a plugin that r
 ```bash
 claude plugin marketplace add spotify/portal-ai-plugins
 claude plugin install portal@portal
-claude plugin install shunt@portal   # optional: token-saving AiKA delegation
+claude plugin install shunt@portal         # optional: token-saving AiKA delegation
+claude plugin install shunt-local@portal   # optional: same, via local subagents, no Portal CLI
 ```
 
 Start a new session and run:

@@ -1,0 +1,41 @@
+#!/bin/bash
+# PreToolUse gate for Read and Bash: denies full reads of large files on the main
+# thread and points Claude at the bulk-reader subagent instead.
+#
+# Calls carrying agent_id come from a subagent, whose tool results never reach the
+# parent context, so they pass through untouched. That is the delegation path.
+# Allow is silence (no stdout): the normal permission flow decides. Emitting
+# permissionDecision "allow" would auto-approve the call and skip the user's rules.
+
+MIN_LINES="${SHUNT_MIN_LINES:-350}"
+case "$MIN_LINES" in ''|*[!0-9]*) MIN_LINES=350 ;; esac
+
+input=$(cat)
+[ -n "$(jq -r '.agent_id // empty' <<<"$input")" ] && exit 0
+
+file_path=""
+case "$(jq -r '.tool_name // empty' <<<"$input")" in
+  Read)
+    # offset or limit set: a targeted read, Claude already knows what it needs
+    [ -n "$(jq -r '(.tool_input.offset // empty), (.tool_input.limit // empty)' <<<"$input")" ] && exit 0
+    file_path=$(jq -r '.tool_input.file_path // empty' <<<"$input")
+    ;;
+  Bash)
+    command=$(jq -r '.tool_input.command // empty' <<<"$input")
+    # a pipe is a targeted read; a redirect does not enter context
+    grep -qE '[|>]' <<<"$command" && exit 0
+    if grep -qE '^(cat|head|tail|less|more) ' <<<"$command"; then
+      # ponytail: first non-flag arg is the path; `head -n 5 f` sees `5`. Parse getopts-style if that bites.
+      for arg in $(sed -E 's/^(cat|head|tail|less|more) +//' <<<"$command"); do
+        case "$arg" in -*) ;; *) file_path=$(tr -d '"'"'" <<<"$arg"); break ;; esac
+      done
+    fi
+    ;;
+esac
+
+[ -n "$file_path" ] && [ -f "$file_path" ] || exit 0
+lines=$(wc -l <"$file_path" | tr -d ' ')
+[ "$lines" -le "$MIN_LINES" ] && exit 0
+
+jq -n --arg reason "File is ${lines} lines (threshold: ${MIN_LINES}). Do not read it directly: delegate with Agent(subagent_type=\"shunt-local:bulk-reader\"), passing the path(s) and your question. It returns bullets and the file never enters your context. If you need exact content for an edit, re-read with offset/limit for just that section." \
+  '{hookSpecificOutput: {hookEventName: "PreToolUse", permissionDecision: "deny", permissionDecisionReason: $reason}}'
